@@ -76,28 +76,49 @@ end
 
 
 # State Estimator
-L = [0.015068724372954935 1.0900011538659846e-22; 0.40464737008963436 0.00029748351739991287; 0.391685305678192 0.8731733818202637]
-estX0 = [0,0,30]
+L_nlopt = [0.023 0.0; 0.53 0.026; 0.44 0.50]
+L_poly = [0.23 0.54; 0.93 0.25; 0.32 0.91]
+estX0 = [0,0,0]
+
+# True System
+function estReac(du, u, p, t)
+    du[1] = -k * u[1] * u[2]
+    du[2] = -k * u[1] * u[2]
+    du[3] = k * u[1] * u[2]
+end
 
 trueProblem = ODEProblem(reaction, [Ca_0, Cb_0, Cc_0], tSpan)
-estimatorProblem = ODEProblem(reaction, [0,0,0], tSpan)
+estimatorProblem = ODEProblem(estReac, estX0, tSpan)
 function measurement(u)
     return [u[1] + u[2]; u[3]]
 end
 
-stateEstimator = StateEstimator(trueProblem, estimatorProblem, measurement, tSpan, Luenberger(L))
-SE_PolyChaos(50, 2, 6).optimize(stateEstimator)
+
+sol_poly = solveEstimatedState(StateEstimator(trueProblem, estimatorProblem, measurement, tSpan, observer=Luenberger(L_poly)))
+sol_nlopt = solveEstimatedState(StateEstimator(trueProblem, estimatorProblem, measurement, tSpan, observer=Luenberger(L_nlopt)))
 sol = solve(trueProblem, Tsit5())
-estSol = solveEstimatedState(stateEstimator)
 
 
 # Plot
 function Save(dir) 
-    savefig(string(@__DIR__, "/figs/$dir.png"))
+    # savefig(string(@__DIR__, "/figs/$dir.png"))
 end
 
-graph = plot(sol, label=[L"$C_a$" L"$C_b$" L"$C_c$"], xlabel="Time (t)", ylabel="Concentration (mol)", title="Bilinear Reaction State Estimation")
-plot!(graph, estSol, linestyle=:dash, label=[L"$C_a$ Estimation" L"$C_b$ Estimation" L"$C_c$ Estimation"], xlabel="Time (t)")
-display(graph)
+trueModel = plot(sol, label=[L"$C_a$" L"$C_b$" L"$C_c$"], xlabel="Time (t)", ylabel="Concentration (mol)", title="Bilinear Reaction")
+display(trueModel)
+Save("bilinear-reaction")
 
-# Save("state-estimation-100x")
+trueModel0 = plot(sol, label=[L"$C_a$" L"$C_b$" L"$C_c$"], xlabel="Time (t)", ylabel="Concentration (mol)", title="Bilinear Reaction State Estimation (PolyChaos)")
+plot!(trueModel0, sol_poly, linestyle=:dash, label=[L"$C_a$ Estimation" L"$C_b$ Estimation" L"$C_c$ Estimation"], xlabel="Time (t)")
+display(trueModel0)
+Save("bilinear-reaction-stateestimator-polychaos")
+
+# trueModel1 = plot(sol, label=[L"$C_a$" L"$C_b$" L"$C_c$"], xlabel="Time (t)", ylabel="Concentration (mol)", title="Bilinear Reaction State Estimation (NLopt)")
+# plot!(trueModel1, sol_nlopt, linestyle=:dash, label=[L"$C_a$ Estimation" L"$C_b$ Estimation" L"$C_c$ Estimation"], xlabel="Time (t)")
+# display(trueModel1)
+# Save("bilinear-reaction-stateestimator-nlopt")
+
+# estimation = plot(sol_poly, linestyle=:dash, label=[L"$C_a$ Poly" L"$C_b$ Poly" L"$C_c$ Poly"], xlabel="Time (t)", ylabel="Concentration (mol)", title="State Estimation")
+# plot!(estimation, sol_nlopt, linestyle=:dash, label=[L"$C_a$ NLopt" L"$C_b$ NLopt" L"$C_c$ NLopt"], xlabel="Time (t)")
+# display(estimation)
+# Save("state-estimation")

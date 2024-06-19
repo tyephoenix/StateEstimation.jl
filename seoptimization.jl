@@ -94,7 +94,7 @@ mutable struct SE_NelderMead <: SE_Optimization
         end
     end
 
-    function SE_NelderMead(interval, maxTime)
+    function SE_NelderMead(interval; maxTime=20)
         self = new(interval, maxTime)
         function optimize0(stateEstimator::StateEstimator)
             optimize(self, stateEstimator)
@@ -143,12 +143,12 @@ mutable struct SE_PolyChaos <: SE_Optimization
                         ym = stateEstimator.measurement(intregrator.u)
                         tF = stateEstimator.observer.format(stateEstimator, [x...])
                         tv  = intregrator.u
-                        eSol = solve(optProblem, Tsit5(), p=[tF, ym], verbose=false)
+                        eSol = solve(optProblem, Tsit5(), p=[tF, ym], maxiters=1e4, verbose=false)
                         ev = eSol(timeIndex)
                         err = tv-ev
                         sq = sum(e -> e^2, err)
                         if (pF[2] >= 0)
-                            peSol = solve(optProblem, Tsit5(), p=[pF[1], ym], verbose=false)
+                            peSol = solve(optProblem, Tsit5(), p=[pF[1], ym], maxiters=1e4, verbose=false)
                             pev = peSol(timeIndex)
                             peErr = tv-pev
                             peSq =  sum(e -> e^2, peErr)
@@ -176,12 +176,11 @@ mutable struct SE_PolyChaos <: SE_Optimization
                             lEle = elements
                         end
                         z = z + 1
-                        println(z)
                     end
                     nF = stateEstimator.observer.format(stateEstimator, [lEle...])
                     s = map[lErr]
                     if (pF[2] < 0) 
-                        pF[1] = stateEstimator.observer.format(stateEstimator, sol.u)
+                        pF[1] = stateEstimator.observer.format(stateEstimator, [lEle...])
                         pF[2] = s[1]
                     else 
                         tw = s[1] + s[2]
@@ -206,7 +205,7 @@ mutable struct SE_PolyChaos <: SE_Optimization
         end
     end
 
-    function SE_PolyChaos(interval, n, d)
+    function SE_PolyChaos(interval, n; d=6)
         self = new(interval, n, d)
         function optimize0(stateEstimator::StateEstimator)
             optimize(self, stateEstimator)

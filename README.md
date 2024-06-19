@@ -6,3 +6,6 @@ stateestimation.jl:
 
 seoptimization.jl:
     - Easy optimization with two methods, NelderMead and PolyChaos respectively.
+
+
+See example.jl to see a working example with a bilinear reaction.
